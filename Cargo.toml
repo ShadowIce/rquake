@@ -1,0 +1,9 @@
+[package]
+name = "rquake"
+version = "0.1.0"
+authors = ["Maurice Gilden <MauriceG@gmx.net>"]
+description = "Handmade Quake in Rust."
+license = "GPLv2"
+
+[target.x86_64-pc-windows-gnu.dependencies]
+winapi = "*"
