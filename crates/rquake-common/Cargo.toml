@@ -1,0 +1,4 @@
+[package]
+name = "rquake-common"
+version = "0.1.0"
+authors = ["Maurice Gilden <MauriceG@gmx.net>"]

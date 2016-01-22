@@ -1,0 +1,10 @@
+[package]
+name = "rquake-win"
+version = "0.1.0"
+authors = ["Maurice Gilden <MauriceG@gmx.net>"]
+
+[dependencies]
+rquake-common = { path = "../rquake-common" }
+winapi = "*"
+user32-sys = "*"
+kernel32-sys = "*"

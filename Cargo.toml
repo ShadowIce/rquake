@@ -5,5 +5,10 @@ authors = ["Maurice Gilden <MauriceG@gmx.net>"]
 description = "Handmade Quake in Rust."
 license = "GPLv2"
 
+[dependencies]
+rquake-fs = { path = "crates/rquake-fs" }
+rquake-common = { path ="crates/rquake-common" }
+clap = "*"
+
 [target.x86_64-pc-windows-gnu.dependencies]
-winapi = "*"
+rquake-win = { path = "crates/rquake-win" }
