@@ -1,4 +1,6 @@
-//! The module system should contain all traits for OS related methods.
+#![warn(missing_docs)]
+
+//! Contains traits for OS related things.
 
 /// Trait representing the main window.
 pub trait Window {

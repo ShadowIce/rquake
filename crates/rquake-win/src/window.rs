@@ -38,12 +38,15 @@ impl FromWide for OsString {
     }
 }
 
+/// Represents the main window on Windows.
 pub struct WinWindow {
     hwnd : HWND,
     running : bool,    
 }
 
 impl WinWindow {
+    /// Creates a new window. If there is a critical error the method
+    /// will return an error string that should be displayed.
     pub fn create_window() -> Result<Self,&'static str> {
         let hinstance : HINSTANCE = unsafe {
             GetModuleHandleW(ptr::null())
