@@ -56,7 +56,7 @@ impl WinWindow {
             cbClsExtra: 0,
             cbWndExtra: 0,
             hInstance: hinstance,
-            hIcon: ptr::null_mut(),
+            hIcon: unsafe{ LoadIconW(hinstance, 1u16 as *const u16) },
             hCursor: unsafe{ LoadCursorW(ptr::null_mut(), IDC_ARROW) },
             hbrBackground: ptr::null_mut(),
             lpszMenuName: ptr::null_mut(),
@@ -68,7 +68,7 @@ impl WinWindow {
             }
         }
         
-        let style = WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+        let style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | /*WS_MAXIMIZEBOX |*/ WS_VISIBLE;//WS_OVERLAPPEDWINDOW | WS_VISIBLE;
         let mut clientrect = RECT {
             left : 0,
             top : 0,

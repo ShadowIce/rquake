@@ -4,4 +4,4 @@ version = "0.1.0"
 authors = ["Maurice Gilden <MauriceG@gmx.net>"]
 
 [dependencies]
-byteorder = "*"
+byteorder = "0.4.2"

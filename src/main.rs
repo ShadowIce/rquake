@@ -6,6 +6,8 @@ extern crate rquake_win;
 
 //use rquake_fs::*;
 use rquake_common::*;
+
+#[cfg(windows)]
 use rquake_win::*;
 
 mod cmdline;
