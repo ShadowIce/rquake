@@ -1,3 +1,5 @@
+extern crate time;
+
 extern crate rquake_fs;
 extern crate rquake_common;
 
@@ -35,8 +37,13 @@ fn main() {
         Ok(window) => window,
     };
     
+    let mut tock = time::precise_time_s();
     while window.is_running() {
         window.handle_message();
+        
+        let tick = tock;
+        tock = time::precise_time_s();
+        let time_passed_in_s = tock - tick;
     }
     
     //let res = PackFile::open("Id1/PAK0.PAK");
