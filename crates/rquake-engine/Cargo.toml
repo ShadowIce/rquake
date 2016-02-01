@@ -1,0 +1,6 @@
+[package]
+name = "rquake-engine"
+version = "0.1.0"
+authors = ["Maurice Gilden <MauriceG@gmx.net>"]
+
+[dependencies]

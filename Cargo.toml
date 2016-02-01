@@ -8,6 +8,7 @@ license = "GPLv2"
 [dependencies]
 rquake-fs = { path = "crates/rquake-fs" }
 rquake-common = { path ="crates/rquake-common" }
+rquake-engine = { path = "crates/rquake-engine" }
 clap = "1.5.5"
 time = "0.1.34"
 

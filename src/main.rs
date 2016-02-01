@@ -2,12 +2,13 @@ extern crate time;
 
 extern crate rquake_fs;
 extern crate rquake_common;
+extern crate rquake_engine;
 
 #[cfg(windows)]
 extern crate rquake_win;
 
-//use rquake_fs::*;
 use rquake_common::*;
+use rquake_engine::*;
 
 #[cfg(windows)]
 use rquake_win::*;
@@ -24,9 +25,12 @@ fn create_window() -> Result<Box<Window>, &'static str> {
 }
 
 fn main() {
-    println!("Hello Quake!");
+    const TARGET_FRAMETIME : f32 = 1.0 / 60.0;
     
     let cmdconfig = cmdline::parse_cmdline();
+    
+    let host = Host::new();
+    host.init();
     
     let window = create_window();
     let mut window = match window {
@@ -37,18 +41,21 @@ fn main() {
         Ok(window) => window,
     };
     
-    let mut tock = time::precise_time_s();
+    let mut oldtime = time::precise_time_s() as f32;
+    let mut acc_time = 0.0f32;
+    
     while window.is_running() {
         window.handle_message();
-        
-        let tick = tock;
-        tock = time::precise_time_s();
-        let time_passed_in_s = tock - tick;
+
+        let newtime = time::precise_time_s() as f32;
+        acc_time = acc_time + (oldtime - newtime);
+        oldtime = newtime;
+
+        if acc_time > TARGET_FRAMETIME {
+            host.frame(TARGET_FRAMETIME);
+            acc_time = acc_time - TARGET_FRAMETIME;
+        }
     }
     
-    //let res = PackFile::open("Id1/PAK0.PAK");
-    //match res {
-    //    Err(e) => { println!("{}", e); }
-    //    _ => {}
-    //};
+    host.shutdown();
 }
