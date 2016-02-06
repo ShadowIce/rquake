@@ -37,13 +37,13 @@ impl Timer {
         self.target_time = target;
     }
     
-    /// Returns the time for the next frame, or 0.0 if not enough time passed.
+    /// Returns the time for the next frame, or None if not enough time passed.
     pub fn next(&mut self) -> Option<f32> {
         let new_time = time::precise_time_ns();
         let rt_in_s = (new_time - self.current_time) as f32 / 1000000000.0f32;
 
         if rt_in_s > self.target_time {
-            // Only increase time if at least target_time seconds have passed.   
+            // no changes until at least target_time seconds have passed.
             self.current_time = new_time;
             if rt_in_s < self.lower_bound {
                 return Some(self.lower_bound);
