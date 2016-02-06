@@ -1,5 +1,3 @@
-extern crate time;
-
 extern crate rquake_fs;
 extern crate rquake_common;
 extern crate rquake_engine;
@@ -25,8 +23,6 @@ fn create_window() -> Result<Box<Window>, &'static str> {
 }
 
 fn main() {
-    const TARGET_FRAMETIME : f32 = 1.0 / 60.0;
-    
     let cmdconfig = cmdline::parse_cmdline();
     
     let host = Host::new();
@@ -41,19 +37,15 @@ fn main() {
         Ok(window) => window,
     };
     
-    let mut oldtime = time::precise_time_s() as f32;
-    let mut acc_time = 0.0f32;
+    let mut timer = utils::Timer::new();
+    timer.set_bounds(0.001, 0.1);
+    timer.set_target(1.0 / 72.0);
     
     while window.is_running() {
         window.handle_message();
 
-        let newtime = time::precise_time_s() as f32;
-        acc_time = acc_time + (oldtime - newtime);
-        oldtime = newtime;
-
-        if acc_time > TARGET_FRAMETIME {
-            host.frame(TARGET_FRAMETIME);
-            acc_time = acc_time - TARGET_FRAMETIME;
+        if let Some(time_step) = timer.next() {
+            host.frame(time_step);
         }
     }
     

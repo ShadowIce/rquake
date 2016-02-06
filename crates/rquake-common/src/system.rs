@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
 
-//! Contains traits for OS related things.
+//! Traits for OS related things.
 
 /// Trait representing the main window.
 pub trait Window {
