@@ -4,7 +4,7 @@ extern crate kernel32;
 extern crate rquake_common;
 
 use self::winapi::*;
-use self::rquake_common::system::*;
+use self::rquake_common::Window;
 use self::user32::*;
 use self::kernel32::GetModuleHandleW;
 

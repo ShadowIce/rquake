@@ -5,11 +5,14 @@ extern crate rquake_engine;
 #[cfg(windows)]
 extern crate rquake_win;
 
-use rquake_common::*;
-use rquake_engine::*;
+use rquake_common::{Timer,Window};
+use rquake_engine::Host;
 
 #[cfg(windows)]
-use rquake_win::*;
+use rquake_win::WinWindow;
+
+use std::thread::sleep;
+use std::time::Duration;
 
 mod cmdline;
 
@@ -37,7 +40,7 @@ fn main() {
         Ok(window) => window,
     };
     
-    let mut timer = utils::Timer::new();
+    let mut timer = Timer::new();
     timer.set_bounds(0.001, 0.1);
     timer.set_target(1.0 / 72.0);
     
@@ -46,6 +49,8 @@ fn main() {
 
         if let Some(time_step) = timer.next() {
             host.frame(time_step);
+        } else {
+            sleep(Duration::from_millis(1));
         }
     }
     

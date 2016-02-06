@@ -1,3 +1,6 @@
-pub mod host;
+#![crate_type= "lib"]
 
-pub use host::*;
+pub use host::Host;
+
+mod host;
+

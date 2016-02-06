@@ -1,4 +1,7 @@
-pub mod window;
+#![crate_type= "lib"]
 
-pub use window::*;
+pub use window::WinWindow;
+
+mod window;
+
 

@@ -1,5 +1,7 @@
-pub mod system;
-pub mod utils;
+#![crate_type= "lib"]
 
-pub use system::*;
-pub use utils::*;
+pub use system::Window;
+pub use utils::Timer;
+
+mod system;
+mod utils;
