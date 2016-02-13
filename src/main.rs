@@ -1,3 +1,5 @@
+extern crate rand;
+
 extern crate rquake_fs;
 extern crate rquake_common;
 extern crate rquake_engine;
@@ -13,6 +15,7 @@ use rquake_win::WinWindow;
 
 use std::thread::sleep;
 use std::time::Duration;
+use rand::Rng;
 
 mod cmdline;
 
@@ -26,7 +29,9 @@ fn create_window() -> Result<Box<Window>, &'static str> {
 }
 
 fn main() {
-    let cmdconfig = cmdline::parse_cmdline();
+    let mut rng = rand::weak_rng();
+    
+    let _ = cmdline::parse_cmdline();
     
     let host = Host::new();
     host.init();
@@ -49,6 +54,19 @@ fn main() {
 
         if let Some(time_step) = timer.next() {
             host.frame(time_step);
+            
+            {
+                // Test code, fill bitmap with random values.
+                // Slow in debug build.
+                let mut bb = window.get_backbuffer();
+                let mut bmp = bb.get_buffer();
+                for v in bmp.iter_mut() {
+                    *v = rng.gen::<u8>();
+                    //*v = ((*v as i32 + 1) % 255) as u8;
+                }
+            }
+
+            window.render();
         } else {
             sleep(Duration::from_millis(1));
         }

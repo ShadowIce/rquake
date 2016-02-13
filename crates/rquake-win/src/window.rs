@@ -2,11 +2,13 @@ extern crate winapi;
 extern crate user32;
 extern crate kernel32;
 extern crate rquake_common;
+extern crate gdi32;
 
 use self::winapi::*;
-use self::rquake_common::Window;
+use self::rquake_common::{BackBuffer, Window};
 use self::user32::*;
-use self::kernel32::GetModuleHandleW;
+use self::kernel32::{GetModuleHandleW};
+use self::gdi32::*;
 
 use std::ptr;
 use std::mem;
@@ -41,13 +43,18 @@ impl FromWide for OsString {
 /// Represents the main window on Windows.
 pub struct WinWindow {
     hwnd : HWND,
-    running : bool,    
+    running : bool,
+    bitmap_info : BITMAPINFO,
+    bitmap : Vec<u8>,
 }
 
 impl WinWindow {
     /// Creates a new window. If there is a critical error the method
     /// will return an error string that should be displayed.
     pub fn create_window() -> Result<Self,&'static str> {
+        const DEFAULT_WIDTH : u32 = 800;
+        const DEFAULT_HEIGHT : u32 = 600;
+        
         let hinstance : HINSTANCE = unsafe {
             GetModuleHandleW(ptr::null())
         };
@@ -71,12 +78,12 @@ impl WinWindow {
             }
         }
         
-        let style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | /*WS_MAXIMIZEBOX |*/ WS_VISIBLE;//WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+        let style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE;
         let mut clientrect = RECT {
             left : 0,
             top : 0,
-            right : 800,
-            bottom: 600,
+            right : DEFAULT_WIDTH as i32,
+            bottom: DEFAULT_HEIGHT as i32,
         };
         
         unsafe {
@@ -92,9 +99,22 @@ impl WinWindow {
                 ptr::null_mut(), ptr::null_mut(), hinstance, ptr::null_mut())
         };
         
-        Ok(WinWindow { 
+        let mut bmp_info : BITMAPINFO = unsafe { mem::zeroed() }; 
+        bmp_info.bmiHeader.biSize = mem::size_of::<BITMAPINFOHEADER>() as DWORD;
+        bmp_info.bmiHeader.biWidth = DEFAULT_WIDTH as i32;
+        bmp_info.bmiHeader.biHeight = DEFAULT_HEIGHT as i32;
+        bmp_info.bmiHeader.biPlanes = 1;
+        bmp_info.bmiHeader.biBitCount = 32;
+        bmp_info.bmiHeader.biSizeImage = DEFAULT_WIDTH * DEFAULT_HEIGHT * 4;
+        bmp_info.bmiHeader.biCompression = BI_RGB;
+        
+        let bmp : Vec<u8> = vec![55; bmp_info.bmiHeader.biSizeImage as usize];
+        
+        Ok(WinWindow {
             hwnd : hwnd,
             running : true, 
+            bitmap : bmp,
+            bitmap_info : bmp_info,
         })
     }
 }
@@ -119,6 +139,36 @@ impl Window for WinWindow {
                 DispatchMessageW(&mut msg);
             }
         }
+    }
+    
+    fn get_backbuffer(&mut self) -> &mut BackBuffer {
+        self as &mut BackBuffer
+    }
+    
+    fn render(&mut self) {
+        let dc = unsafe { GetDC(self.hwnd) };
+        
+        unsafe {
+            StretchDIBits(dc, 
+                0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
+                0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
+                mem::transmute(self.bitmap.as_ptr()), mem::transmute(&self.bitmap_info), DIB_RGB_COLORS, SRCCOPY);
+            ReleaseDC(self.hwnd, dc);
+        }
+    }
+}
+
+impl BackBuffer for WinWindow {
+    fn get_buffer(&mut self) -> &mut [u8] {
+        &mut self.bitmap
+    }
+    
+    fn get_width(&self) -> u32 {
+        self.bitmap_info.bmiHeader.biWidth as u32
+    }
+    
+    fn get_height(&self) -> u32 {
+        self.bitmap_info.bmiHeader.biHeight as u32
     }
 }
 

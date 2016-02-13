@@ -15,4 +15,23 @@ pub trait Window {
     /// Should be called for each iteration of the game loop
     /// to handle window/system messages.
     fn handle_message(&mut self);
+    
+    /// Returns the back buffer of the Window. This is
+    /// used to draw stuff into.
+    fn get_backbuffer(&mut self) -> &mut BackBuffer;
+    
+    /// Renders the back buffer to the window.
+    fn render(&mut self);
+}
+
+/// Trait representing a bitmap buffer that can be drawn into. 
+pub trait BackBuffer {
+    /// Returns the buffer as slice.
+    fn get_buffer(&mut self) -> &mut [u8];
+    
+    /// Returns the width of the back buffer.
+    fn get_width(&self) -> u32;
+    
+    /// Returns the height of the buffer.
+    fn get_height(&self) -> u32;
 }
