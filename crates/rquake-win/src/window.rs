@@ -149,10 +149,13 @@ impl Window for WinWindow {
         let dc = unsafe { GetDC(self.hwnd) };
         
         unsafe {
+            let bmp_ptr : *const VOID = self.bitmap.as_ptr() as *const _ as *const VOID;
+            let bmpinfo_ptr : *const BITMAPINFO = &self.bitmap_info as *const BITMAPINFO;
+            
             StretchDIBits(dc, 
                 0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
                 0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
-                mem::transmute(self.bitmap.as_ptr()), mem::transmute(&self.bitmap_info), DIB_RGB_COLORS, SRCCOPY);
+                bmp_ptr, bmpinfo_ptr, DIB_RGB_COLORS, SRCCOPY);
             ReleaseDC(self.hwnd, dc);
         }
     }
