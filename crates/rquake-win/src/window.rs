@@ -51,7 +51,7 @@ pub struct WinWindow {
 impl WinWindow {
     /// Creates a new window. If there is a critical error the method
     /// will return an error string that should be displayed.
-    pub fn create_window() -> Result<Self,&'static str> {
+    pub fn create_window() -> Result<Self, &'static str> {
         const DEFAULT_WIDTH : u32 = 800;
         const DEFAULT_HEIGHT : u32 = 600;
         
@@ -108,7 +108,7 @@ impl WinWindow {
         bmp_info.bmiHeader.biSizeImage = DEFAULT_WIDTH * DEFAULT_HEIGHT * 4;
         bmp_info.bmiHeader.biCompression = BI_RGB;
         
-        let bmp : Vec<u8> = vec![55; bmp_info.bmiHeader.biSizeImage as usize];
+        let bmp : Vec<u8> = vec![0; bmp_info.bmiHeader.biSizeImage as usize];
         
         Ok(WinWindow {
             hwnd : hwnd,
@@ -142,16 +142,16 @@ impl Window for WinWindow {
     }
     
     fn get_backbuffer(&mut self) -> &mut BackBuffer {
-        self as &mut BackBuffer
+        self
     }
     
     fn render(&mut self) {
         let dc = unsafe { GetDC(self.hwnd) };
         
-        unsafe {
-            let bmp_ptr : *const VOID = self.bitmap.as_ptr() as *const _ as *const VOID;
-            let bmpinfo_ptr : *const BITMAPINFO = &self.bitmap_info as *const BITMAPINFO;
+        let bmp_ptr : *const VOID = self.bitmap.as_ptr() as *const _ as *const VOID;
+        let bmpinfo_ptr : *const BITMAPINFO = &self.bitmap_info as *const BITMAPINFO;
             
+        unsafe {
             StretchDIBits(dc, 
                 0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
                 0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
@@ -182,7 +182,6 @@ unsafe extern "system" fn windowproc(hwnd: HWND, msg: UINT, wparam: WPARAM, lpar
             return 0;
         }
         _ => {
-            //println!("msg: {}", msg);
             return DefWindowProcW(hwnd, msg, wparam, lparam);
         }
     }
