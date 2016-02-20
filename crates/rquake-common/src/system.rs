@@ -27,7 +27,7 @@ pub trait Window {
 /// Trait representing a bitmap buffer that can be drawn into. 
 pub trait BackBuffer {
     /// Returns the buffer as slice.
-    fn get_buffer(&mut self) -> &mut [u8];
+    fn get_buffer(&mut self) -> &mut [u32];
     
     /// Returns the width of the back buffer.
     fn get_width(&self) -> u32;

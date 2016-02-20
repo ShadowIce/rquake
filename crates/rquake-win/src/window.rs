@@ -45,7 +45,7 @@ pub struct WinWindow {
     hwnd : HWND,
     running : bool,
     bitmap_info : BITMAPINFO,
-    bitmap : Vec<u8>,
+    bitmap : Vec<u32>,
 }
 
 impl WinWindow {
@@ -102,13 +102,14 @@ impl WinWindow {
         let mut bmp_info : BITMAPINFO = unsafe { mem::zeroed() }; 
         bmp_info.bmiHeader.biSize = mem::size_of::<BITMAPINFOHEADER>() as DWORD;
         bmp_info.bmiHeader.biWidth = DEFAULT_WIDTH as i32;
-        bmp_info.bmiHeader.biHeight = DEFAULT_HEIGHT as i32;
+        bmp_info.bmiHeader.biHeight = -(DEFAULT_HEIGHT as i32);
         bmp_info.bmiHeader.biPlanes = 1;
         bmp_info.bmiHeader.biBitCount = 32;
         bmp_info.bmiHeader.biSizeImage = DEFAULT_WIDTH * DEFAULT_HEIGHT * 4;
         bmp_info.bmiHeader.biCompression = BI_RGB;
-        
-        let bmp : Vec<u8> = vec![0; bmp_info.bmiHeader.biSizeImage as usize];
+        assert_eq!(bmp_info.bmiHeader.biSizeImage % 4, 0);
+
+        let bmp : Vec<u32> = vec![0; (bmp_info.bmiHeader.biSizeImage / 4) as usize];
         
         Ok(WinWindow {
             hwnd : hwnd,
@@ -153,8 +154,8 @@ impl Window for WinWindow {
             
         unsafe {
             StretchDIBits(dc, 
-                0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
-                0, 0, self.bitmap_info.bmiHeader.biWidth, self.bitmap_info.bmiHeader.biHeight,
+                0, 0, self.bitmap_info.bmiHeader.biWidth, -self.bitmap_info.bmiHeader.biHeight,
+                0, 0, self.bitmap_info.bmiHeader.biWidth, -self.bitmap_info.bmiHeader.biHeight,
                 bmp_ptr, bmpinfo_ptr, DIB_RGB_COLORS, SRCCOPY);
             ReleaseDC(self.hwnd, dc);
         }
@@ -162,7 +163,7 @@ impl Window for WinWindow {
 }
 
 impl BackBuffer for WinWindow {
-    fn get_buffer(&mut self) -> &mut [u8] {
+    fn get_buffer(&mut self) -> &mut [u32] {
         &mut self.bitmap
     }
     

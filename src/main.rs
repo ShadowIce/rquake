@@ -9,6 +9,7 @@ extern crate rquake_win;
 
 use rquake_common::{Timer,Window};
 use rquake_engine::Host;
+use rquake_fs::{PackFile};
 
 #[cfg(windows)]
 use rquake_win::WinWindow;
@@ -36,6 +37,18 @@ fn main() {
     let host = Host::new();
     host.init();
     
+    // Test code, reads a file from the resources
+    let mut pf0 = match PackFile::open("Id1/PAK0.PAK") {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+    
+    let pause_bitmap = match pf0.read_lmp("gfx/pause.lmp") {
+        Ok(f) => f,
+        Err(_) => return,
+    };
+    
+    // Create main window
     let window = create_window();
     let mut window = match window {
         Err(err) => {
@@ -45,10 +58,12 @@ fn main() {
         Ok(window) => window,
     };
     
+    // Create game timer
     let mut timer = Timer::new();
     timer.set_bounds(0.001, 0.1);
     timer.set_target(1.0 / 72.0);
     
+    // Game loop
     while window.is_running() {
         window.handle_message();
 
@@ -59,10 +74,21 @@ fn main() {
                 // Test code, fill bitmap with random values.
                 // Slow in debug build.
                 let mut bb = window.get_backbuffer();
-                let mut bmp = bb.get_buffer();
+                let bb_width = bb.get_width();
+                let mut bmp = bb.get_buffer(); // bb borrowed as mutable here on windows
                 for v in bmp.iter_mut() {
-                    *v = rng.gen::<u8>();
-                    //*v = ((*v as i32 + 1) % 255) as u8;
+                    *v = rng.gen::<u32>();
+                }
+                
+                // Test code, draw pause logo
+                // memcpy anyone?
+                for y in 0..pause_bitmap.height {
+                    let src_x = (pause_bitmap.width * y) as usize;
+                    let dst_x = (bb_width * y as u32) as usize;
+                    let mut src = pause_bitmap.bitmap.iter().skip(src_x).take(pause_bitmap.width as usize);
+                    for v in bmp.iter_mut().skip(dst_x).take(pause_bitmap.width as usize) {
+                        *v = *(src.next().unwrap_or(&0u32));
+                    }
                 }
             }
 

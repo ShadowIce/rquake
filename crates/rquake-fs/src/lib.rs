@@ -19,13 +19,25 @@ pub struct PackFile {
     packfiles : Vec<PackFileInfo>,
 }
 
+pub struct LumpFile {
+    pub width : i32,
+    pub height : i32,
+    pub bitmap : Vec<u32>,
+}
+
+fn palette_lookup(index : u8) -> u32 {
+    // todo: move to trait and load palette from file.
+    let index32 = index as u32;
+    index32 + index32 * 256 + index32 * 256 * 256
+}
+
 impl PackFile {
-    /// Opens a .pak file and reads the files inside it.
+    /// Opens a .pak file and reads the file list inside it.
     pub fn open(filename : &str) -> Result<PackFile, &str> {
-        let packfile = File::open(filename);
+        let file = File::open(filename);
         let mut packfile = PackFile {
-            file : match packfile {
-                Ok(packfile) => packfile,
+            file : match file {
+                Ok(f) => f,
                 Err(_) => return Err("Read error"),
             },
             packfiles : Vec::new(),
@@ -93,6 +105,57 @@ impl PackFile {
         
         Ok(packfile)
     }
+    
+    /// Reads a lmp (lump) file and converts it to RGBA.
+    pub fn read_lmp(&mut self, name : &str) -> Result<LumpFile, &str> {
+        if !name.ends_with(".lmp") {
+            println!("File {} has wrong extension. Must be .lmp.", name);
+            return Err("Wrong file extension. Must be .lmp");
+        }
+        
+        if !self.seek_to_file(name) {
+            println!("File {} not found", name);
+            return Err("File not found.");
+        }
+        
+        let width = match self.file.read_i32::<LittleEndian>() {
+            Ok(w) => w,
+            Err(_) => return Err("Read error"),
+        };
+
+        let height = match self.file.read_i32::<LittleEndian>() {
+            Ok(h) => h,
+            Err(_) => return Err("Read error"),
+        };
+ 
+        let mut buffer = vec![0; (width * height) as usize];
+        if let Err(err) = self.file.read(&mut buffer) {
+            println!("Read error on file {}, {}", name, err);
+            return Err("Read error");
+        }
+        
+        // todo: add proper palette lookup
+        let bitmap = buffer.iter().map(|&x| palette_lookup(x)).collect();
+
+        println!("Width: {}, Height: {}", width, height);
+        
+        Ok(LumpFile {
+            width : width,
+            height : height,
+            bitmap : bitmap,
+        })
+    }
+    
+    fn seek_to_file(&mut self, name : &str) -> bool {
+        if let Some(pf) = self.packfiles.iter().find(|&f| f.name == name) {
+            if let Err(err) = self.file.seek(SeekFrom::Start(pf.filepos as u64)) {
+                println!("Invalid file position {} for file {}. {}", pf.filepos, name, err);
+                return false;
+            }
+            return true;
+        }
+        false
+    }
 }
 
 /// Returns the file name without path and extension.
@@ -123,5 +186,13 @@ mod test {
     #[test]
     fn open_pak_file() {
         let mut packfile = PackFile::open("Id1/PAK0.PAK");
+    }
+    
+    #[test]
+    fn read_lmp_file() {
+        let mut packfile = PackFile::open("Id1/PAK0.PAK").unwrap();
+        let pause_bitmap = packfile.read_lmp("gfx/pause.lmp").unwrap();
+        assert_eq!(pause_bitmap.width, 128);
+        assert_eq!(pause_bitmap.height, 24);
     }
 }
