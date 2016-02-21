@@ -8,6 +8,16 @@ use byteorder::{LittleEndian, ReadBytesExt};
 const MAX_FILES_IN_PACK : i32 = 2048;
 const PACKFILE_INFO_LEN : i32 = 64;
 
+pub struct Palette {
+    palette : [u32;256],
+}
+
+impl Palette {
+    fn palette_lookup(&self, index : u8) -> u32 {
+        self.palette[index as usize]
+    }
+}
+
 struct PackFileInfo {
     name : String,
     filepos : i32,
@@ -23,12 +33,6 @@ pub struct LumpFile {
     pub width : i32,
     pub height : i32,
     pub bitmap : Vec<u32>,
-}
-
-fn palette_lookup(index : u8) -> u32 {
-    // todo: move to trait and load palette from file.
-    let index32 = index as u32;
-    index32 + index32 * 256 + index32 * 256 * 256
 }
 
 impl PackFile {
@@ -107,7 +111,7 @@ impl PackFile {
     }
     
     /// Reads a lmp (lump) file and converts it to RGBA.
-    pub fn read_lmp(&mut self, name : &str) -> Result<LumpFile, &str> {
+    pub fn read_lmp(&mut self, name : &str, pal : &Palette) -> Result<LumpFile, &str> {
         if !name.ends_with(".lmp") {
             println!("File {} has wrong extension. Must be .lmp.", name);
             return Err("Wrong file extension. Must be .lmp");
@@ -134,8 +138,7 @@ impl PackFile {
             return Err("Read error");
         }
         
-        // todo: add proper palette lookup
-        let bitmap = buffer.iter().map(|&x| palette_lookup(x)).collect();
+        let bitmap = buffer.iter().map(|&x| pal.palette_lookup(x)).collect();
 
         println!("Width: {}, Height: {}", width, height);
         
@@ -144,6 +147,29 @@ impl PackFile {
             height : height,
             bitmap : bitmap,
         })
+    }
+    
+    pub fn read_palette(&mut self) -> Result<Palette, &str> {
+        if !self.seek_to_file("gfx/palette.lmp") {
+            println!("Palette file not found.");
+            return Err("Palette file not found.");
+        }
+        
+        let mut pal = [0u8;256 * 3];
+        if let Err(err) = self.file.read(&mut pal) {
+            println!("Read error on palette file, {}", err);
+            return Err("Read error on palette file.");
+        }
+        
+        let mut pal32 = [0u32; 256];
+        let mut pal_iter = pal.iter();
+        for value in pal32.iter_mut() {
+            *value = *pal_iter.next().unwrap() as u32;
+            *value = *value * 256 + *pal_iter.next().unwrap() as u32;
+            *value = *value * 256 + *pal_iter.next().unwrap() as u32;
+        }
+        
+        Ok(Palette { palette : pal32 })
     }
     
     fn seek_to_file(&mut self, name : &str) -> bool {
@@ -185,13 +211,14 @@ mod test {
 
     #[test]
     fn open_pak_file() {
-        let mut packfile = PackFile::open("Id1/PAK0.PAK");
+        let mut packfile = PackFile::open("../../Id1/PAK0.PAK").unwrap();
     }
     
     #[test]
     fn read_lmp_file() {
-        let mut packfile = PackFile::open("Id1/PAK0.PAK").unwrap();
-        let pause_bitmap = packfile.read_lmp("gfx/pause.lmp").unwrap();
+        let mut packfile = PackFile::open("../../Id1/PAK0.PAK").unwrap();
+        let pal = packfile.read_palette().unwrap();
+        let pause_bitmap = packfile.read_lmp("gfx/pause.lmp", &pal).unwrap();
         assert_eq!(pause_bitmap.width, 128);
         assert_eq!(pause_bitmap.height, 24);
     }

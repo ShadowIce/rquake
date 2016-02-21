@@ -43,7 +43,12 @@ fn main() {
         Err(_) => return,
     };
     
-    let pause_bitmap = match pf0.read_lmp("gfx/pause.lmp") {
+    let palette = match pf0.read_palette() {
+        Ok(pal) => pal,
+        Err(_) => return,
+    };
+    
+    let pause_bitmap = match pf0.read_lmp("gfx/pause.lmp", &palette) {
         Ok(f) => f,
         Err(_) => return,
     };
