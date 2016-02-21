@@ -48,7 +48,7 @@ fn main() {
         Err(_) => return,
     };
     
-    let pause_bitmap = match pf0.read_lmp("gfx/pause.lmp", &palette) {
+    let pause_bitmap = match pf0.read_lmp("gfx/conback.lmp", &palette) {
         Ok(f) => f,
         Err(_) => return,
     };

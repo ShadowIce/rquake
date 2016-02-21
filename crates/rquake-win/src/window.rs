@@ -46,14 +46,18 @@ pub struct WinWindow {
     running : bool,
     bitmap_info : BITMAPINFO,
     bitmap : Vec<u32>,
+    window_width : i32,
+    window_height : i32,
 }
 
 impl WinWindow {
     /// Creates a new window. If there is a critical error the method
     /// will return an error string that should be displayed.
     pub fn create_window() -> Result<Self, &'static str> {
-        const DEFAULT_WIDTH : u32 = 800;
-        const DEFAULT_HEIGHT : u32 = 600;
+        const DEFAULT_WIDTH : i32 = 800;
+        const DEFAULT_HEIGHT : i32 = 600;
+        const BITMAP_WIDTH : i32 = 320;
+        const BITMAP_HEIGHT : i32 = 240;
         
         let hinstance : HINSTANCE = unsafe {
             GetModuleHandleW(ptr::null())
@@ -101,11 +105,11 @@ impl WinWindow {
         
         let mut bmp_info : BITMAPINFO = unsafe { mem::zeroed() }; 
         bmp_info.bmiHeader.biSize = mem::size_of::<BITMAPINFOHEADER>() as DWORD;
-        bmp_info.bmiHeader.biWidth = DEFAULT_WIDTH as i32;
-        bmp_info.bmiHeader.biHeight = -(DEFAULT_HEIGHT as i32);
+        bmp_info.bmiHeader.biWidth = BITMAP_WIDTH;
+        bmp_info.bmiHeader.biHeight = -BITMAP_HEIGHT; // negative to place 0,0 at the top left border
         bmp_info.bmiHeader.biPlanes = 1;
         bmp_info.bmiHeader.biBitCount = 32;
-        bmp_info.bmiHeader.biSizeImage = DEFAULT_WIDTH * DEFAULT_HEIGHT * 4;
+        bmp_info.bmiHeader.biSizeImage = (bmp_info.bmiHeader.biWidth * -bmp_info.bmiHeader.biHeight * bmp_info.bmiHeader.biBitCount as i32 / 8) as u32;
         bmp_info.bmiHeader.biCompression = BI_RGB;
         assert_eq!(bmp_info.bmiHeader.biSizeImage % 4, 0);
 
@@ -116,6 +120,8 @@ impl WinWindow {
             running : true, 
             bitmap : bmp,
             bitmap_info : bmp_info,
+            window_width : DEFAULT_WIDTH,
+            window_height : DEFAULT_HEIGHT,
         })
     }
 }
@@ -154,7 +160,7 @@ impl Window for WinWindow {
             
         unsafe {
             StretchDIBits(dc, 
-                0, 0, self.bitmap_info.bmiHeader.biWidth, -self.bitmap_info.bmiHeader.biHeight,
+                0, 0, self.window_width, self.window_height,
                 0, 0, self.bitmap_info.bmiHeader.biWidth, -self.bitmap_info.bmiHeader.biHeight,
                 bmp_ptr, bmpinfo_ptr, DIB_RGB_COLORS, SRCCOPY);
             ReleaseDC(self.hwnd, dc);
