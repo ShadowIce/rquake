@@ -2,6 +2,8 @@
 
 //! Traits for OS related things.
 
+use types::EventAction;
+
 /// Trait representing the main window.
 pub trait Window {
     /// Shows the main window.
@@ -14,7 +16,7 @@ pub trait Window {
     
     /// Should be called for each iteration of the game loop
     /// to handle window/system messages.
-    fn handle_message(&mut self);
+    fn handle_message(&mut self) -> Vec<EventAction>;
     
     /// Returns the back buffer of the Window. This is
     /// used to draw stuff into.
@@ -34,4 +36,10 @@ pub trait BackBuffer {
     
     /// Returns the height of the buffer.
     fn get_height(&self) -> u32;
+}
+
+/// Trait required to switch between fullscreen and windowed mode.
+pub trait ToggleFullscreen {
+    /// Switches between fullscreen and windowed mode.
+    fn toggle_fullscreen(&mut self);
 }

@@ -5,9 +5,9 @@ extern crate rquake_common;
 extern crate gdi32;
 
 use self::winapi::*;
-use self::rquake_common::{BackBuffer, Window};
+use self::rquake_common::{BackBuffer, Window, EventAction, ToggleFullscreen};
 use self::user32::*;
-use self::kernel32::{GetModuleHandleW};
+use self::kernel32::{GetModuleHandleW,GetLastError};
 use self::gdi32::*;
 
 use std::ptr;
@@ -48,6 +48,7 @@ pub struct WinWindow {
     bitmap : Vec<u32>,
     window_width : i32,
     window_height : i32,
+    old_window_placement : WINDOWPLACEMENT,
 }
 
 impl WinWindow {
@@ -115,6 +116,9 @@ impl WinWindow {
 
         let bmp : Vec<u32> = vec![0; (bmp_info.bmiHeader.biSizeImage / 4) as usize];
         
+        let mut win_placement : WINDOWPLACEMENT = unsafe { mem::zeroed() };
+        win_placement.length = mem::size_of::<WINDOWPLACEMENT>() as UINT;
+        
         Ok(WinWindow {
             hwnd : hwnd,
             running : true, 
@@ -122,6 +126,7 @@ impl WinWindow {
             bitmap_info : bmp_info,
             window_width : DEFAULT_WIDTH,
             window_height : DEFAULT_HEIGHT,
+            old_window_placement : win_placement,
         })
     }
 }
@@ -135,17 +140,19 @@ impl Window for WinWindow {
         self.running
     }
     
-    fn handle_message(&mut self) {
-        unsafe {
-            let mut msg: MSG = mem::zeroed();
-            if PeekMessageW(&mut msg as LPMSG, ptr::null_mut(), 0, 0, PM_REMOVE) != FALSE {
-                TranslateMessage(&msg);
-                
-                if msg.message == WM_QUIT { self.running = false; }
-                
-                DispatchMessageW(&mut msg);
+    fn handle_message(&mut self) -> Vec<EventAction> {
+        let mut actions : Vec<_> = Vec::new();
+        let mut msg: MSG = unsafe { mem::zeroed() };
+        if unsafe { PeekMessageW(&mut msg as LPMSG, ptr::null_mut(), 0, 0, PM_REMOVE) } != FALSE {
+            unsafe { TranslateMessage(&msg) };
+            
+            match msg.message {
+                WM_QUIT => self.running = false,
+                WM_KEYDOWN => { actions.push(EventAction::ToggleFullscreen); self.toggle_fullscreen(); },
+                _ => unsafe { let _ = DispatchMessageW(&mut msg); },
             }
         }
+        actions
     }
     
     fn get_backbuffer(&mut self) -> &mut BackBuffer {
@@ -166,6 +173,47 @@ impl Window for WinWindow {
             ReleaseDC(self.hwnd, dc);
         }
     }
+}
+
+#[link(name = "user32")]
+extern "system" {
+    fn MonitorFromWindow(hwnd : HWND, dwFlags : DWORD) -> HMONITOR;
+    fn SetWindowPlacement(hwnd : HWND, lpwndpl : *const WINDOWPLACEMENT) -> BOOL;
+}
+
+impl ToggleFullscreen for WinWindow {
+    fn toggle_fullscreen(&mut self) {
+        const MONITOR_DEFAULTTOPRIMARY : DWORD = 0x00000001;
+        const HWND_TOP : HWND = 0 as HWND;
+        
+        unsafe {
+            let style : i32 = GetWindowLongW(self.hwnd, GWL_STYLE);
+            if style & (WS_OVERLAPPEDWINDOW as i32) != 0 {
+                let mut mi : MONITORINFO = mem::zeroed();
+                mi.cbSize = mem::size_of::<MONITORINFO>() as DWORD;
+                let res_gwp = GetWindowPlacement(self.hwnd, &mut self.old_window_placement);
+                let res_gmi = GetMonitorInfoW(MonitorFromWindow(self.hwnd, MONITOR_DEFAULTTOPRIMARY), &mut mi);
+                if res_gwp != 0 && res_gmi != 0 {
+                    self.window_width = mi.rcMonitor.right - mi.rcMonitor.left;
+                    self.window_height = mi.rcMonitor.bottom - mi.rcMonitor.top;
+
+                    SetWindowLongW(self.hwnd, GWL_STYLE, style & !(WS_OVERLAPPEDWINDOW as i32));
+                    SetWindowPos(self.hwnd, HWND_TOP,
+                        mi.rcMonitor.left, mi.rcMonitor.top,
+                        self.window_width, self.window_height,
+                        SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+                }
+            } else {
+                self.window_width = self.old_window_placement.rcNormalPosition.right - self.old_window_placement.rcNormalPosition.left;
+                self.window_height = self.old_window_placement.rcNormalPosition.bottom - self.old_window_placement.rcNormalPosition.top;
+                SetWindowLongW(self.hwnd, GWL_STYLE, style | (WS_OVERLAPPEDWINDOW as i32));
+                SetWindowPlacement(self.hwnd, &self.old_window_placement);
+                SetWindowPos(self.hwnd, 0 as HWND, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                    SWP_NOOWNERZORDER | SWP_FRAMECHANGED);
+            }
+        }
+    }    
 }
 
 impl BackBuffer for WinWindow {

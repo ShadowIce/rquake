@@ -69,11 +69,13 @@ fn main() {
     timer.set_target(1.0 / 72.0);
     
     // Game loop
+    let mut pending_actions = Vec::new();
     while window.is_running() {
-        window.handle_message();
+        let mut new_actions = window.handle_message();
+        pending_actions.append(&mut new_actions);
 
         if let Some(time_step) = timer.next() {
-            host.frame(time_step);
+            host.frame(time_step, &pending_actions);
             
             {
                 // Test code, fill bitmap with random values.

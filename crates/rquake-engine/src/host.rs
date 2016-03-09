@@ -4,6 +4,10 @@
 //! 
 //! Original source can be found in host.c
 
+extern crate rquake_common;
+
+use self::rquake_common::EventAction;
+
 /// Local server instance.
 pub struct Host;
 
@@ -19,7 +23,7 @@ impl Host {
     }
     
     /// Runs one frame iteration.
-    pub fn frame(&self, timestep : f32) {
+    pub fn frame(&self, timestep : f32, actions : &[EventAction]) {
         
     } 
     
