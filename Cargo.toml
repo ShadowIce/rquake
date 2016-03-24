@@ -10,7 +10,6 @@ rquake-fs = { path = "crates/rquake-fs" }
 rquake-common = { path ="crates/rquake-common" }
 rquake-engine = { path = "crates/rquake-engine" }
 clap = "2.1.2"
-rand = "0.3.14"
 
 [target.x86_64-pc-windows-gnu.dependencies]
 rquake-win = { path = "crates/rquake-win" }

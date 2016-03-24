@@ -6,20 +6,24 @@
 
 extern crate rquake_common;
 
-use self::rquake_common::EventAction;
+use self::rquake_common::{EventAction,GameResources};
 
 /// Local server instance.
-pub struct Host;
+pub struct Host<'a> {
+    game_res : &'a mut GameResources,
+}
 
-impl Host {
+impl<'a> Host<'a> {
     /// Creates a new local server instance.
-    pub fn new() -> Host {
-        Host
+    pub fn new(game_res : &mut GameResources) -> Host {
+        Host {
+            game_res : game_res,
+        }
     }
     
     /// Initializes the server. 
-    pub fn init(&self) {
-        
+    pub fn init(&mut self) {
+        self.game_res.add_game_directory("Id1");
     }
     
     /// Runs one frame iteration.

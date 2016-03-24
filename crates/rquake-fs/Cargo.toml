@@ -4,4 +4,5 @@ version = "0.1.0"
 authors = ["Maurice Gilden <MauriceG@gmx.net>"]
 
 [dependencies]
+rquake-common = { path = "../rquake-common" }
 byteorder = "0.4.2"
