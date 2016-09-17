@@ -8,21 +8,14 @@ use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::iter::Iterator;
 use std::str::from_utf8;
+
 use self::byteorder::{LittleEndian, ReadBytesExt};
+
+use lump::{Picture, Palette};
+use wadfile::WadFile;
 
 const MAX_FILES_IN_PACK : i32 = 2048;
 const PACKFILE_INFO_LEN : i32 = 64;
-
-/// Palette for color lookup from 8bit color index to 32bit RGBA.
-pub struct Palette {
-    palette : [u32;256],
-}
-
-impl Palette {
-    fn palette_lookup(&self, index : u8) -> u32 {
-        self.palette[index as usize]
-    }
-}
 
 struct PackFileInfo {
     name : String,
@@ -36,21 +29,9 @@ pub struct PackFile {
     packfiles : Vec<PackFileInfo>,
 }
 
-/// Lump-file (graphics). Contains a bitmap in 32bit RGBA.
-pub struct LumpFile {
-    /// Width of the bitmap.
-    pub width : i32,
-    
-    /// Height of the bitmap.
-    pub height : i32,
-    
-    /// Bitmap content.
-    pub bitmap : Vec<u32>,
-}
-
 impl PackFile {
     /// Opens a .pak file and reads the file list inside it.
-    pub fn open(filename : &str) -> Result<PackFile, &str> {
+    pub fn open(filename : &str) -> Result<PackFile, &'static str> {
         let file = File::open(filename);
         let mut packfile = PackFile {
             file : match file {
@@ -124,7 +105,7 @@ impl PackFile {
     }
     
     /// Reads a lmp (lump) file and converts it to RGBA.
-    pub fn read_lmp(&mut self, name : &str, pal : &Palette) -> Result<LumpFile, &str> {
+    pub fn read_lmp(&mut self, name : &str, pal : &Palette) -> Result<Picture, &'static str> {
         if !name.ends_with(".lmp") {
             println!("File {} has wrong extension. Must be .lmp.", name);
             return Err("Wrong file extension. Must be .lmp");
@@ -134,58 +115,30 @@ impl PackFile {
             println!("File {} not found", name);
             return Err("File not found.");
         }
-        
-        let width = match self.file.read_i32::<LittleEndian>() {
-            Ok(w) => w,
-            Err(_) => return Err("Read error"),
-        };
 
-        let height = match self.file.read_i32::<LittleEndian>() {
-            Ok(h) => h,
-            Err(_) => return Err("Read error"),
-        };
- 
-        let mut buffer = vec![0; (width * height) as usize];
-        if let Err(err) = self.file.read(&mut buffer) {
-            println!("Read error on file {}, {}", name, err);
-            return Err("Read error");
-        }
-        
-        let bitmap = buffer.iter().map(|&x| pal.palette_lookup(x)).collect();
-
-        println!("Width: {}, Height: {}", width, height);
-        
-        Ok(LumpFile {
-            width : width,
-            height : height,
-            bitmap : bitmap,
-        })
+        Picture::read(&mut self.file, &pal)
     }
     
     /// TODO: make non-public
-    pub fn read_palette(&mut self) -> Result<Palette, &str> {
+    pub fn read_palette(&mut self) -> Result<Palette, &'static str> {
         if !self.seek_to_file("gfx/palette.lmp") {
             println!("Palette file not found.");
             return Err("Palette file not found.");
         }
-        
-        let mut pal = [0u8;256 * 3];
-        if let Err(err) = self.file.read(&mut pal) {
-            println!("Read error on palette file, {}", err);
-            return Err("Read error on palette file.");
-        }
-        
-        let mut pal32 = [0u32; 256];
-        let mut pal_iter = pal.iter();
-        for value in pal32.iter_mut() {
-            *value = *pal_iter.next().unwrap() as u32;
-            *value = *value * 256 + *pal_iter.next().unwrap() as u32;
-            *value = *value * 256 + *pal_iter.next().unwrap() as u32;
-        }
-        
-        Ok(Palette { palette : pal32 })
+
+        Palette::read(&mut self.file)        
     }
     
+    /// reads the directory structure of a wad file
+    pub fn read_wad(&mut self, name : &str) -> Result<WadFile, &'static str> {
+        if !self.seek_to_file(name) {
+            println!("File {} not found", name);
+            return Err("File not found.");
+        }
+
+        WadFile::read(&mut self.file)
+    }
+
     fn seek_to_file(&mut self, name : &str) -> bool {
         if let Some(pf) = self.packfiles.iter().find(|&f| f.name == name) {
             if let Err(err) = self.file.seek(SeekFrom::Start(pf.filepos as u64)) {
