@@ -2,6 +2,7 @@
 name = "rquake-engine"
 version = "0.1.0"
 authors = ["Maurice Gilden <MauriceG@gmx.net>"]
+license = "GPLv2"
 
 [dependencies]
 rquake-common = { path = "../rquake-common" }
