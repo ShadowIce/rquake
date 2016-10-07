@@ -2,9 +2,11 @@
 
 extern crate byteorder;
 
-use std::io::{Read,Seek,SeekFrom};
+use std::io;
 use self::byteorder::{LittleEndian, ReadBytesExt};
 use std::str::from_utf8;
+
+use error;
 
 enum WadFileType {
     Unknown,
@@ -31,79 +33,51 @@ pub struct WadFile {
 impl WadFile {
 
     /// Reads the file list in a wad file. The reader must point to the beginning of the wad file.
-    pub fn read<T:Read+Seek>(reader : &mut T) -> Result<WadFile, &'static str> {
-        let start_offset = reader.seek(SeekFrom::Current(0)).unwrap();   // will be added to filepos of WAD entries
+    pub fn read<T:io::Read+io::Seek>(reader : &mut T) -> Result<WadFile, error::ReadError> {
+        let start_offset = reader.seek(io::SeekFrom::Current(0)).unwrap();   // will be added to filepos of WAD entries
         let mut headerid = [0u8; 4];
-        match reader.read(&mut headerid[..]) {
-            Ok(res) => if res < 4 { return Err("Read error, could not read WAD header")},
-            Err(_) => return Err("Read error"),
-        };
-        if &headerid != &[0x57, 0x41, 0x44, 0x32] { return Err("Read error: WAD header corrupt/unknown"); }
+        let headerlen = try!(reader.read(&mut headerid[..]));
+        if headerlen < 4 { return Err(error::ReadError::ParseError); }
+        if &headerid != &[0x57, 0x41, 0x44, 0x32] { return Err(error::ReadError::ParseError); }
 
         let mut wadfile = WadFile {
             wadfiles : Vec::new(),
         };
 
-        let numentries = match reader.read_i32::<LittleEndian>() {
-            Ok(res) => res,
-            Err(_) => return Err("Read error"),
-        };
-
-        let diroffset = match reader.read_i32::<LittleEndian>() {
-            Ok(res) => res,
-            Err(_) => return Err("Read error"),
-        };
+        let numentries = try!(reader.read_i32::<LittleEndian>());
+        let diroffset = try!(reader.read_i32::<LittleEndian>()); 
 
         println!("diroffset = {}", diroffset);
         println!("numentries = {}", numentries);
 
-        if let Err(_) = reader.seek(SeekFrom::Start(start_offset + (diroffset as u64))) {
-            return Err("Read error");
-        }
+        try!(reader.seek(io::SeekFrom::Start(start_offset + (diroffset as u64))));
 
         wadfile.wadfiles.reserve(numentries as usize);
         
         for _ in 0..numentries {
-            let offset = match reader.read_i32::<LittleEndian>() {
-                Ok(res) => res,
-                Err(_) => return Err("Read error"),
-            };
-            let dsize = match reader.read_i32::<LittleEndian>() {
-                Ok(res) => res,
-                Err(_) => return Err("Read error"),
-            };
-            let size = match reader.read_i32::<LittleEndian>() {
-                Ok(res) => res,
-                Err(_) => return Err("Read error"),
-            };
+            let offset = try!(reader.read_i32::<LittleEndian>());
+            let dsize = try!(reader.read_i32::<LittleEndian>());
+            let size = try!(reader.read_i32::<LittleEndian>());
             if size != dsize {
-                return Err("Unexpected mismatch between size and dsize in WAD file");
+                return Err(error::ReadError::ParseError);
             }
-            let filetype = match reader.read_u8() {
-                Ok(res) => res,
-                Err(_) => return Err("Read error"),
-            };
-            let compression = match reader.read_u8() {
-                Ok(res) => res,
-                Err(_) => return Err("Read error"),
-            };
+            let filetype = try!(reader.read_u8());
+            let compression = try!(reader.read_u8());
             if compression != 0u8 {
-                return Err("Compressed files in WAD not supported");
+                return Err(error::ReadError::ParseError);
             }
+
             // skip reserved 2 bytes
-            if let Err(_) = reader.seek(SeekFrom::Current(2)) {
-                return Err("Read error");
-            }
+            try!(reader.seek(io::SeekFrom::Current(2)));
+
             let mut buf = [0u8; 16];
-            match reader.read(&mut buf[..]) {
-                Err(_) => return Err("Read error"),
-                _ => {},
-            }
+            try!(reader.read(&mut buf[..]));
             let str_end = buf.iter().position(|c| *c == 0u8).unwrap();
             let filename = match from_utf8(&buf[..str_end]) {
-                Err(_) => return Err("Read error: filename invalid"),
+                Err(_) => return Err(error::ReadError::ParseError),
                 Ok(name) => name,
             };
+
             wadfile.wadfiles.push(WadFileInfo {
                 name : filename.to_string(),
                 filepos : offset + (start_offset as i32),
@@ -122,9 +96,9 @@ impl WadFile {
     }
 
     /// Seeks to the position of a file inside a WAD file.
-    pub fn seek_to_file(&self, wadfile: &mut Seek, filename: &str) -> bool {
+    pub fn seek_to_file(&self, wadfile: &mut io::Seek, filename: &str) -> bool {
         if let Some(wadentry) = self.wadfiles.iter().find(|&f| f.name == filename) {
-            if let Err(err) = wadfile.seek(SeekFrom::Start(wadentry.filepos as u64)) {
+            if let Err(err) = wadfile.seek(io::SeekFrom::Start(wadentry.filepos as u64)) {
                 println!("Invalid file position {} for file {}. {}", wadentry.filepos, filename, err);
                 return false;
             }

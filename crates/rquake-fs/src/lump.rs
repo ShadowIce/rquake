@@ -5,6 +5,8 @@ extern crate byteorder;
 use std::io::Read;
 use self::byteorder::{LittleEndian, ReadBytesExt};
 
+use error;
+
 /// Palette for color lookup from 8bit color index to 32bit RGBA.
 pub struct Palette {
     palette : [u32;256],
@@ -12,12 +14,9 @@ pub struct Palette {
 
 impl Palette {
     /// Reads a palette of 256 RGB colors.
-    pub fn read(reader : &mut Read) -> Result<Palette, &'static str> {
+    pub fn read(reader : &mut Read) -> Result<Palette, error::ReadError> {
         let mut pal = [0u8;256 * 3];
-        if let Err(err) = reader.read(&mut pal) {
-            println!("Read error on palette file, {}", err);
-            return Err("Read error on palette file.");
-        }
+        try!(reader.read(&mut pal));
         
         let mut pal32 = [0u32; 256];
         let mut pal_iter = pal.iter();
@@ -50,21 +49,11 @@ pub struct Picture {
 impl Picture {
 
     /// Reads a picture lmp (lump) file and converts it to RGBA using a palette.
-    pub fn read(reader : &mut Read, pal : &Palette) -> Result<Picture, &'static str> {
-        let width = match reader.read_i32::<LittleEndian>() {
-            Ok(w) => w,
-            Err(_) => return Err("Read error"),
-        };
-
-        let height = match reader.read_i32::<LittleEndian>() {
-            Ok(h) => h,
-            Err(_) => return Err("Read error"),
-        };
- 
+    pub fn read(reader : &mut Read, pal : &Palette) -> Result<Picture, error::ReadError> {
+        let width = try!(reader.read_i32::<LittleEndian>());
+        let height = try!(reader.read_i32::<LittleEndian>());
         let mut buffer = vec![0; (width * height) as usize];
-        if let Err(_) = reader.read(&mut buffer) {
-            return Err("Read error");
-        }
+        try!(reader.read(&mut buffer));
         
         let bitmap = buffer.iter().map(|&x| pal.palette_lookup(x)).collect();
 

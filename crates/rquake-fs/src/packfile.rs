@@ -13,6 +13,7 @@ use self::byteorder::{LittleEndian, ReadBytesExt};
 
 use lump::{Picture, Palette};
 use wadfile::WadFile;
+use error;
 
 const MAX_FILES_IN_PACK : i32 = 2048;
 const PACKFILE_INFO_LEN : i32 = 64;
@@ -31,67 +32,45 @@ pub struct PackFile {
 
 impl PackFile {
     /// Opens a .pak file and reads the file list inside it.
-    pub fn open(filename : &str) -> Result<PackFile, &'static str> {
+    pub fn open(filename : &str) -> Result<PackFile, error::ReadError> {
         let file = File::open(filename);
         let mut packfile = PackFile {
             file : match file {
                 Ok(f) => f,
-                Err(_) => return Err("Read error"),
+                Err(_) => return Err(error::ReadError::FileNotFound),
             },
             packfiles : Vec::new(),
         };
         
         let mut headerid = [0u8; 4];
-        match packfile.file.read(&mut headerid[..]) {
-            Ok(res) => if res < 4 { return Err("Read error, could not read header")},
-            Err(_) => return Err("Read error"),
-        };
-        if &headerid != &[0x50, 0x41, 0x43, 0x4B] { return Err("Read error: pack header corrupt"); }
+        let headerlen = try!(packfile.file.read(&mut headerid[..]));
+        if headerlen < 4 { return Err(error::ReadError::ParseError); }
+        if &headerid != &[0x50, 0x41, 0x43, 0x4B] { return Err(error::ReadError::ParseError); }
         
-        let diroffset = match packfile.file.read_i32::<LittleEndian>() {
-            Ok(res) => res,
-            Err(_) => return Err("Read error"),
-        };
-        
-        let dirlen = match packfile.file.read_i32::<LittleEndian>() {
-            Ok(res) => res,
-            Err(_) => return Err("Read error"),
-        };
+        let diroffset = try!(packfile.file.read_i32::<LittleEndian>());
+        let dirlen = try!(packfile.file.read_i32::<LittleEndian>());
 
         let numfiles = dirlen / PACKFILE_INFO_LEN;
-        
-        if numfiles > MAX_FILES_IN_PACK { return Err("Too many files in pack"); }
+        if numfiles > MAX_FILES_IN_PACK { return Err(error::ReadError::ParseError); }
 
         println!("dir_offset = {}", diroffset);
         println!("dir_len = {}, numfiles = {}", dirlen, numfiles);
         
         packfile.packfiles.reserve(numfiles as usize);
         
-        match packfile.file.seek(SeekFrom::Start(diroffset as u64)) {
-            Err(_) => return Err("Read error"),
-            _ => {},
-        };
+        try!(packfile.file.seek(SeekFrom::Start(diroffset as u64)));
         
         for _ in 0..numfiles {
             let mut buf = [0u8; 56];
-            match packfile.file.read(&mut buf[..]) {
-                Err(_) => return Err("Read error"),
-                _ => {},
-            }
+            try!(packfile.file.read(&mut buf[..]));
             let str_end = buf.iter().position(|c| *c == 0u8).unwrap();
             let filename = match from_utf8(&buf[..str_end]) {
-                Err(_) => return Err("Read error: filename invalid"),
+                Err(_) => return Err(error::ReadError::ParseError),
                 Ok(name) => name,
             };
             
-            let filepos = match packfile.file.read_i32::<LittleEndian>() {
-                Ok(fp) => fp,
-                Err(_) => return Err("Read error"),
-            };
-            let filelen = match packfile.file.read_i32::<LittleEndian>() {
-                Ok(fp) => fp,
-                Err(_) => return Err("Read error"),
-            };
+            let filepos = try!(packfile.file.read_i32::<LittleEndian>());
+            let filelen = try!(packfile.file.read_i32::<LittleEndian>());
             
             println!("filename = {}, pos = {}, len = {}, base = {}", filename, filepos, filelen, filebase(filename));
             packfile.packfiles.push(PackFileInfo { 
@@ -105,35 +84,35 @@ impl PackFile {
     }
     
     /// Reads a lmp (lump) file and converts it to RGBA.
-    pub fn read_lmp(&mut self, name : &str, pal : &Palette) -> Result<Picture, &'static str> {
+    pub fn read_lmp(&mut self, name : &str, pal : &Palette) -> Result<Picture, error::ReadError> {
         if !name.ends_with(".lmp") {
             println!("File {} has wrong extension. Must be .lmp.", name);
-            return Err("Wrong file extension. Must be .lmp");
+            return Err(error::ReadError::ParseError);
         }
         
         if !self.seek_to_file(name) {
             println!("File {} not found", name);
-            return Err("File not found.");
+            return Err(error::ReadError::FileNotFound);
         }
 
         Picture::read(&mut self.file, &pal)
     }
     
     /// TODO: make non-public
-    pub fn read_palette(&mut self) -> Result<Palette, &'static str> {
+    pub fn read_palette(&mut self) -> Result<Palette, error::ReadError> {
         if !self.seek_to_file("gfx/palette.lmp") {
             println!("Palette file not found.");
-            return Err("Palette file not found.");
+            return Err(error::ReadError::FileNotFound);
         }
 
         Palette::read(&mut self.file)        
     }
     
     /// reads the directory structure of a wad file
-    pub fn read_wad(&mut self, name : &str) -> Result<WadFile, &'static str> {
+    pub fn read_wad(&mut self, name : &str) -> Result<WadFile, error::ReadError> {
         if !self.seek_to_file(name) {
             println!("File {} not found", name);
-            return Err("File not found.");
+            return Err(error::ReadError::FileNotFound);
         }
 
         WadFile::read(&mut self.file)
