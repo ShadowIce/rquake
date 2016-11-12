@@ -16,7 +16,7 @@ impl Palette {
     /// Reads a palette of 256 RGB colors.
     pub fn read(reader : &mut Read) -> Result<Palette, error::ReadError> {
         let mut pal = [0u8;256 * 3];
-        try!(reader.read(&mut pal));
+        reader.read(&mut pal)?;
         
         let mut pal32 = [0u32; 256];
         let mut pal_iter = pal.iter();
@@ -50,10 +50,10 @@ impl Picture {
 
     /// Reads a picture lmp (lump) file and converts it to RGBA using a palette.
     pub fn read(reader : &mut Read, pal : &Palette) -> Result<Picture, error::ReadError> {
-        let width = try!(reader.read_i32::<LittleEndian>());
-        let height = try!(reader.read_i32::<LittleEndian>());
+        let width = reader.read_i32::<LittleEndian>()?;
+        let height = reader.read_i32::<LittleEndian>()?;
         let mut buffer = vec![0; (width * height) as usize];
-        try!(reader.read(&mut buffer));
+        reader.read(&mut buffer)?;
         
         let bitmap = buffer.iter().map(|&x| pal.palette_lookup(x)).collect();
 

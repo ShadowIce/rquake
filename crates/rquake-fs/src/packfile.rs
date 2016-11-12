@@ -43,12 +43,12 @@ impl PackFile {
         };
         
         let mut headerid = [0u8; 4];
-        let headerlen = try!(packfile.file.read(&mut headerid[..]));
+        let headerlen = packfile.file.read(&mut headerid[..])?;
         if headerlen < 4 { return Err(error::ReadError::ParseError); }
         if &headerid != &[0x50, 0x41, 0x43, 0x4B] { return Err(error::ReadError::ParseError); }
         
-        let diroffset = try!(packfile.file.read_i32::<LittleEndian>());
-        let dirlen = try!(packfile.file.read_i32::<LittleEndian>());
+        let diroffset = packfile.file.read_i32::<LittleEndian>()?;
+        let dirlen = packfile.file.read_i32::<LittleEndian>()?;
 
         let numfiles = dirlen / PACKFILE_INFO_LEN;
         if numfiles > MAX_FILES_IN_PACK { return Err(error::ReadError::ParseError); }
@@ -58,19 +58,19 @@ impl PackFile {
         
         packfile.packfiles.reserve(numfiles as usize);
         
-        try!(packfile.file.seek(SeekFrom::Start(diroffset as u64)));
+        packfile.file.seek(SeekFrom::Start(diroffset as u64))?;
         
         for _ in 0..numfiles {
             let mut buf = [0u8; 56];
-            try!(packfile.file.read(&mut buf[..]));
+            packfile.file.read(&mut buf[..])?;
             let str_end = buf.iter().position(|c| *c == 0u8).unwrap();
             let filename = match from_utf8(&buf[..str_end]) {
                 Err(_) => return Err(error::ReadError::ParseError),
                 Ok(name) => name,
             };
             
-            let filepos = try!(packfile.file.read_i32::<LittleEndian>());
-            let filelen = try!(packfile.file.read_i32::<LittleEndian>());
+            let filepos = packfile.file.read_i32::<LittleEndian>()?;
+            let filelen = packfile.file.read_i32::<LittleEndian>()?;
             
             println!("filename = {}, pos = {}, len = {}, base = {}", filename, filepos, filelen, filebase(filename));
             packfile.packfiles.push(PackFileInfo { 

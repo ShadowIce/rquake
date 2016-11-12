@@ -36,7 +36,7 @@ impl WadFile {
     pub fn read<T:io::Read+io::Seek>(reader : &mut T) -> Result<WadFile, error::ReadError> {
         let start_offset = reader.seek(io::SeekFrom::Current(0)).unwrap();   // will be added to filepos of WAD entries
         let mut headerid = [0u8; 4];
-        let headerlen = try!(reader.read(&mut headerid[..]));
+        let headerlen = reader.read(&mut headerid[..])?;
         if headerlen < 4 { return Err(error::ReadError::ParseError); }
         if &headerid != &[0x57, 0x41, 0x44, 0x32] { return Err(error::ReadError::ParseError); }
 
@@ -44,34 +44,34 @@ impl WadFile {
             wadfiles : Vec::new(),
         };
 
-        let numentries = try!(reader.read_i32::<LittleEndian>());
-        let diroffset = try!(reader.read_i32::<LittleEndian>()); 
+        let numentries = reader.read_i32::<LittleEndian>()?;
+        let diroffset = reader.read_i32::<LittleEndian>()?; 
 
         println!("diroffset = {}", diroffset);
         println!("numentries = {}", numentries);
 
-        try!(reader.seek(io::SeekFrom::Start(start_offset + (diroffset as u64))));
+        reader.seek(io::SeekFrom::Start(start_offset + (diroffset as u64)))?;
 
         wadfile.wadfiles.reserve(numentries as usize);
         
         for _ in 0..numentries {
-            let offset = try!(reader.read_i32::<LittleEndian>());
-            let dsize = try!(reader.read_i32::<LittleEndian>());
-            let size = try!(reader.read_i32::<LittleEndian>());
+            let offset = reader.read_i32::<LittleEndian>()?;
+            let dsize = reader.read_i32::<LittleEndian>()?;
+            let size = reader.read_i32::<LittleEndian>()?;
             if size != dsize {
                 return Err(error::ReadError::ParseError);
             }
-            let filetype = try!(reader.read_u8());
-            let compression = try!(reader.read_u8());
+            let filetype = reader.read_u8()?;
+            let compression = reader.read_u8()?;
             if compression != 0u8 {
                 return Err(error::ReadError::ParseError);
             }
 
             // skip reserved 2 bytes
-            try!(reader.seek(io::SeekFrom::Current(2)));
+            reader.seek(io::SeekFrom::Current(2))?;
 
             let mut buf = [0u8; 16];
-            try!(reader.read(&mut buf[..]));
+            reader.read(&mut buf[..])?;
             let str_end = buf.iter().position(|c| *c == 0u8).unwrap();
             let filename = match from_utf8(&buf[..str_end]) {
                 Err(_) => return Err(error::ReadError::ParseError),
