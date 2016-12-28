@@ -9,7 +9,8 @@ license = "GPLv2"
 rquake-fs = { path = "crates/rquake-fs" }
 rquake-common = { path ="crates/rquake-common" }
 rquake-engine = { path = "crates/rquake-engine" }
-clap = "2.18.0"
+clap = "2.19.3"
 
-[target.x86_64-pc-windows-gnu.dependencies]
+[target.'cfg(windows)'.dependencies]
 rquake-win = { path = "crates/rquake-win" }
+

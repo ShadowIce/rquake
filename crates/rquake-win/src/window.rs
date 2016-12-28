@@ -175,12 +175,6 @@ impl Window for WinWindow {
     }
 }
 
-#[link(name = "user32")]
-extern "system" {
-    fn MonitorFromWindow(hwnd : HWND, dwFlags : DWORD) -> HMONITOR;
-    fn SetWindowPlacement(hwnd : HWND, lpwndpl : *const WINDOWPLACEMENT) -> BOOL;
-}
-
 impl ToggleFullscreen for WinWindow {
     fn toggle_fullscreen(&mut self) {
         const MONITOR_DEFAULTTOPRIMARY : DWORD = 0x00000001;
@@ -241,5 +235,3 @@ unsafe extern "system" fn windowproc(hwnd: HWND, msg: UINT, wparam: WPARAM, lpar
         }
     }
 }
-
-
