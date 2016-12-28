@@ -13,6 +13,7 @@ use self::byteorder::{LittleEndian, ReadBytesExt};
 
 use lump::{Picture, Palette};
 use wadfile::WadFile;
+use wavefile::Sound;
 use error;
 
 const MAX_FILES_IN_PACK : i32 = 2048;
@@ -116,6 +117,15 @@ impl PackFile {
         }
 
         WadFile::read(&mut self.file)
+    }
+
+    /// Reads a wave file.
+    pub fn read_wave(&mut self, name : &str) -> Result<Sound, error::ReadError> {
+        if !self.seek_to_file(name) {
+            println!("File {} not found", name);
+            return Err(error::ReadError::FileNotFound);
+        }
+        Sound::read(&mut self.file)
     }
 
     fn seek_to_file(&mut self, name : &str) -> bool {

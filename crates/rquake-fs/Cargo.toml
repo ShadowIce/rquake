@@ -7,3 +7,4 @@ license = "GPLv2"
 [dependencies]
 rquake-common = { path = "../rquake-common" }
 byteorder = "0.5.3"
+riff-wave = "0.1.2"
