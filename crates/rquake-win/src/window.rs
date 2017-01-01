@@ -1,15 +1,8 @@
-extern crate winapi;
-extern crate user32;
-extern crate kernel32;
-extern crate rquake_common;
-extern crate gdi32;
-
-use self::winapi::*;
-use self::rquake_common::{BackBuffer, Window, EventAction, ToggleFullscreen};
-use self::user32::*;
-use self::kernel32::{GetModuleHandleW,GetLastError};
-use self::gdi32::*;
-
+use rquake_common::{BackBuffer, Window, EventAction, ToggleFullscreen};
+use winapi::*;
+use user32::*;
+use kernel32::{GetModuleHandleW};
+use gdi32::*;
 use std::ptr;
 use std::mem;
 
@@ -97,7 +90,7 @@ impl WinWindow {
         
         let title = "rQuake".to_wide_null();
         let hwnd = unsafe {
-            user32::CreateWindowExW(0, wc.lpszClassName, title.as_ptr(),
+            CreateWindowExW(0, wc.lpszClassName, title.as_ptr(),
                 style,
                 CW_USEDEFAULT, CW_USEDEFAULT, 
                 clientrect.right - clientrect.left, clientrect.bottom - clientrect.top, 

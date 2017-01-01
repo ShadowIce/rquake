@@ -54,8 +54,8 @@ impl PackFile {
         let numfiles = dirlen / PACKFILE_INFO_LEN;
         if numfiles > MAX_FILES_IN_PACK { return Err(error::ReadError::ParseError); }
 
-        println!("dir_offset = {}", diroffset);
-        println!("dir_len = {}, numfiles = {}", dirlen, numfiles);
+        //println!("dir_offset = {}", diroffset);
+        //println!("dir_len = {}, numfiles = {}", dirlen, numfiles);
         
         packfile.packfiles.reserve(numfiles as usize);
         
@@ -73,7 +73,7 @@ impl PackFile {
             let filepos = packfile.file.read_i32::<LittleEndian>()?;
             let filelen = packfile.file.read_i32::<LittleEndian>()?;
             
-            println!("filename = {}, pos = {}, len = {}, base = {}", filename, filepos, filelen, filebase(filename));
+            //println!("filename = {}, pos = {}, len = {}, base = {}", filename, filepos, filelen, filebase(filename));
             packfile.packfiles.push(PackFileInfo { 
                 name : filename.to_string(),
                 filepos : filepos,

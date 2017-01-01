@@ -43,3 +43,12 @@ pub trait ToggleFullscreen {
     /// Switches between fullscreen and windowed mode.
     fn toggle_fullscreen(&mut self);
 }
+
+/// Trait for the native part of the sound engine.
+pub trait NativeSoundEngine {
+    /// Initializes the native sound engine.
+    fn init(&mut self);
+
+    /// Terminates the native sound engine.
+    fn shutdown(&mut self);
+}

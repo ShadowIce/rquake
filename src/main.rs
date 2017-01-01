@@ -5,12 +5,12 @@ extern crate rquake_engine;
 #[cfg(windows)]
 extern crate rquake_win;
 
-use rquake_common::{Timer,Window};
-use rquake_engine::Host;
+use rquake_common::{Timer,Window,NativeSoundEngine};
+use rquake_engine::{Host,SoundEngine};
 use rquake_fs::{GameResourcesImpl};
 
 #[cfg(windows)]
-use rquake_win::WinWindow;
+use rquake_win::{WinWindow,DirectSoundEngine};
 
 use std::thread::sleep;
 use std::time::Duration;
@@ -26,14 +26,14 @@ fn create_window() -> Result<Box<Window>, &'static str> {
     }
 }
 
+#[cfg(windows)]
+fn create_sound_engine() -> Box<NativeSoundEngine> {
+    Box::new(DirectSoundEngine::new())
+}
+
 fn main() {
     let _ = cmdline::parse_cmdline();
-    
-    let mut game_res = GameResourcesImpl::new();
-    let mut host = Host::new(&mut game_res);
 
-    host.init();
-  
     // Create main window
     let window = create_window();
     let mut window = match window {
@@ -43,7 +43,14 @@ fn main() {
         },
         Ok(window) => window,
     };
-    
+
+    let native_snd = create_sound_engine();
+    let mut snd = SoundEngine::new(native_snd);
+    let mut game_res = GameResourcesImpl::new();
+    let mut host = Host::new(&mut game_res, &mut snd);
+
+    host.init();
+
     // Create game timer
     let mut timer = Timer::new();
     timer.set_bounds(0.001, 0.1);
