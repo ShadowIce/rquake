@@ -16,4 +16,4 @@ clap = "2.19.3"
 rquake-win = { path = "crates/rquake-win" }
 
 [target.'cfg(windows)'.build-dependencies]
-winres = "0.1.0"
+winres = "0.1.1"
