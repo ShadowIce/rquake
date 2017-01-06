@@ -1,5 +1,5 @@
 environment:
-    - TARGET: x86_64-pc-windows-msvc
+    TARGET: x86_64-pc-windows-msvc
 
 install:
     # Install Rust
