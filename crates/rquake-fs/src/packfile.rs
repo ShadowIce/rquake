@@ -167,15 +167,21 @@ mod test {
 
     #[test]
     fn open_pak_file() {
-        let mut packfile = PackFile::open("../../Id1/PAK0.PAK").unwrap();
+        let mut packfile = PackFile::open("../../test-data/test.pak").unwrap();
+    }
+
+    #[test]
+    fn read_palette() {
+        let mut packfile = PackFile::open("../../test-data/test.pak").unwrap();
+        let pal = packfile.read_palette().unwrap();
     }
     
     #[test]
     fn read_lmp_file() {
-        let mut packfile = PackFile::open("../../Id1/PAK0.PAK").unwrap();
+        let mut packfile = PackFile::open("../../test-data/test.pak").unwrap();
         let pal = packfile.read_palette().unwrap();
-        let pause_bitmap = packfile.read_lmp("gfx/pause.lmp", &pal).unwrap();
-        assert_eq!(pause_bitmap.width, 128);
-        assert_eq!(pause_bitmap.height, 24);
+        let pause_bitmap = packfile.read_lmp("gfx/image.lmp", &pal).unwrap();
+        assert_eq!(pause_bitmap.width, 32);
+        assert_eq!(pause_bitmap.height, 32);
     }
 }
