@@ -1,0 +1,21 @@
+environment:
+    - TARGET: x86_64-pc-windows-msvc
+
+install:
+    # Install Rust
+    - ps: Start-FileDownload "https://win.rustup.rs/"
+    - rustup-init.exe -y --default-host %TARGET%
+    - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
+    - rustc -V
+    - cargo -V
+
+build: false
+
+test_script:
+    - cargo build --target %TARGET%
+    - cargo test --manifest-path crates\rquake-common\Cargo.toml --target %TARGET%
+    - cargo test --manifest-path crates\rquake-engine\Cargo.toml --target %TARGET%
+    - cargo test --manifest-path crates\rquake-fs\Cargo.toml --target %TARGET%
+    - cargo test --manifest-path crates\rquake-win\Cargo.toml --target %TARGET%
+    - cargo test --target %TARGET%
+    
