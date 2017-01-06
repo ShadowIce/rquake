@@ -14,3 +14,4 @@ mod lump;
 mod wadfile;
 mod wavefile;
 mod error;
+mod utils;

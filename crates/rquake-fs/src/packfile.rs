@@ -15,6 +15,7 @@ use lump::{Picture, Palette};
 use wadfile::WadFile;
 use wavefile::Sound;
 use error;
+use utils::LengthLimitedReader;
 
 const MAX_FILES_IN_PACK : i32 = 2048;
 const PACKFILE_INFO_LEN : i32 = 64;
@@ -125,7 +126,9 @@ impl PackFile {
             println!("File {} not found", name);
             return Err(error::ReadError::FileNotFound);
         }
-        Sound::read(&mut self.file)
+        let pf = self.packfiles.iter().find(|&f| f.name == name).unwrap();
+        let mut reader = LengthLimitedReader::new(&mut self.file, pf.filelen as u64);
+        Sound::read(&mut reader)
     }
 
     fn seek_to_file(&mut self, name : &str) -> bool {
@@ -183,5 +186,13 @@ mod test {
         let pause_bitmap = packfile.read_lmp("gfx/image.lmp", &pal).unwrap();
         assert_eq!(pause_bitmap.width, 32);
         assert_eq!(pause_bitmap.height, 32);
+    }
+
+    #[test]
+    fn read_wav_file() {
+        let mut packfile = PackFile::open("../../test-data/test.pak").unwrap();
+        let pal = packfile.read_palette().unwrap();
+        let wavefile = packfile.read_wave("sound/silence.wav").unwrap();
+        assert_eq!(wavefile.samples.len(), 36052);
     }
 }
